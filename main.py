@@ -103,6 +103,9 @@ def script_parser(csv_file, name_idx, dialog_idx):
                         who = " ".join(line[name_idx].split()) if line[name_idx] else 'Narrator'
                         dialog = " ".join(line[dialog_idx].split())
 
+                        if dialog == '':
+                            continue
+
                         r.write(who + ': ' + dialog + '\n')
 
         # 바이너리 정보로 전송하기 위함
@@ -156,6 +159,7 @@ def csv_req(types):
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
 
 
+# 샘플 다운로드 링크
 @app.route('/sample_download')
 def send_sample():
     return send_file('csv_data/sample.csv', mimetype='text/csv', attachment_filename='sample.csv'), 200
