@@ -47,10 +47,10 @@
         }
 
         const formData = new FormData();
-        const url = "/heading";
+        const url = "/csv/heading";
         let start = 0;
 
-        formData.append('csv_file', csv_file);
+        formData.append('file', csv_file);
 
         // set timer
         timer = setInterval(() => {
@@ -138,11 +138,11 @@
         }
 
         const formData = new FormData();
-        const url = "/script";
+        const url = "/csv/script";
         const file_name = csv_file['name'].split('.')[0];
         let start = 0;
 
-        formData.append('csv_file', csv_file);
+        formData.append('file', csv_file);
         formData.append('name', name);
         formData.append('dialog', dialog);
 
@@ -230,7 +230,7 @@
                 <h3>Notice</h3>
                 <ul>
                     <li>In Now, support only csv.</li>
-                    <li><a href="/sample_download" download="sample.csv">Sample download</a></li>
+                    <li><a href="/csv/sample_download" download="sample.csv">Sample download</a></li>
                 </ul>
             </div>
 
