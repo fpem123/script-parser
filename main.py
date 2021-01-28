@@ -155,6 +155,13 @@ def csv_req(types):
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
 
 
+##
+# Sever health checking page.
+@app.route('/healthz', methods=["GET"])
+def health_check():
+    return "Health", 200
+
+
 @app.route('/')
 def main():
     return render_template('main.html'), 200
