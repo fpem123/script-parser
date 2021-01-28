@@ -78,6 +78,15 @@
                 table.removeChild(table.lastChild);
             }
 
+            const table_info = table.insertRow();
+            const f_line = table_info.insertCell(0);
+            const s_line = table_info.insertCell(1);
+            const t_line = table_info.insertCell(2);
+
+            f_line.innerText = 'Index';
+            s_line.innerText = 'Info';
+            t_line.innerText = 'Sample';
+
             for (let i=0; i < data[0].length; i++){
                 const row = table.insertRow();
                 const index_column = row.insertCell(0);

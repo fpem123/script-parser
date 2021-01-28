@@ -26,6 +26,7 @@ csv.field_size_limit(100000000)
 UPLOAD_FOLDER = './csv_data/upload'
 RESULT_FOLDER = './csv_data/result'
 
+# make dir
 if not os.path.isdir('./csv_data'):
     os.mkdir('./csv_data')
 
