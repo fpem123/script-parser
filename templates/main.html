@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Script parser</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+</head>
+<script type="text/javascript">
+    let p_time_obj = undefined;     // 파싱 타이머
+    let s_time_obj = undefined;     // 스크립트 메이킹 타이머
+    let flag = undefined;           // 더블 클릭 체크
+
+    window.onload = () => {
+        p_time_obj = document.getElementById("heading_timer");
+        s_time_obj = document.getElementById("script_timer");
+        flag = false;
+    }
+
+    function double_submit_check() {
+        if (flag) {
+            console.log("double");
+            return true;
+        }
+        else {
+            flag = true;
+
+            return false;
+        }
+    }
+
+    function send_parsing_req() {
+        if (double_submit_check()){
+            return ;
+        }
+
+        const csv_file = document.getElementById("csv_file").files[0];
+
+        if (csv_file == undefined) {
+            document.getElementById('warning').innerText = 'Please upload CSV file';
+            flag = false;
+            return ;
+        }
+
+        const formData = new FormData();
+        const url = "/heading";
+        let start = 0;
+
+        formData.append('csv_file', csv_file);
+
+        // set timer
+        timer = setInterval(() => {
+            start += 1;
+            p_time_obj.innerText = `${start / 10} 's`;
+        }, 100);
+
+        // send request
+        fetch (url, { method: 'POST', body: formData, })
+        .then(response => {
+            if (response.status === 200) {
+                return response.json();
+            } else {
+                clearInterval(timer);
+            }
+        }).catch(err => {
+            clearInterval(timer);
+            flag = false;
+            document.getElementById('warning').innerText = err;
+        }).then(data => {
+            const table = document.getElementById('heading_table');
+
+            // 기존 내용 삭제
+            while (table.hasChildNodes()) {
+                table.removeChild(table.lastChild);
+            }
+
+            for (let i=0; i < data[0].length; i++){
+                const row = table.insertRow();
+                const index_column = row.insertCell(0);
+                const column = row.insertCell(1);
+                const sample_data = row.insertCell(2);
+
+                index_column.innerHTML = i;
+                column.innerHTML = data[0][i];
+                sample_data.innerHTML = data[1][i];
+            }
+
+            clearInterval(timer);
+            p_time_obj.innerText = 'Done!';
+            flag = false;
+        }).catch(err => {
+            clearInterval(timer);
+            flag = false;
+            document.getElementById('warning').innerText = err;
+        });
+    }
+
+    function send_script_req() {
+        if (double_submit_check()){
+            return ;
+        }
+
+        const csv_file = document.getElementById("csv_file").files[0];
+        const name = document.getElementById("name").value;
+        const dialog = document.getElementById("dialog").value;
+
+        if (csv_file == undefined) {
+            document.getElementById('warning').innerText = 'Please upload CSV file';
+            flag = false;
+            return ;
+        }
+
+        if (name == '') {
+            document.getElementById('name_warning').innerText = 'Please fill name idx';
+            flag = false;
+
+            return ;
+        }
+
+        if (dialog == '') {
+            document.getElementById('warning').innerText = 'Please fill dialog idx';
+            flag = false;
+
+            return ;
+        }
+
+        const formData = new FormData();
+        const url = "/script";
+        const file_name = csv_file['name'].split('.')[0];
+        let start = 0;
+
+        formData.append('csv_file', csv_file);
+        formData.append('name', name);
+        formData.append('dialog', dialog);
+
+        // set timer
+        timer = setInterval(() => {
+            start += 1;
+            s_time_obj.innerText = `${start / 10} 's`;
+        }, 100);
+
+        // send request
+        fetch (url, { method: 'POST', body: formData, })
+        .then(response => {
+            if (response.status === 200) {
+                return response.blob();
+            } else {
+                clearInterval(timer);
+            }
+        }).catch(err => {
+            clearInterval(timer);
+            flag = false;
+            document.getElementById('warning').innerText = err;
+        }).then(data => {
+            let result_url = window.URL.createObjectURL(data);
+            let dl_btn = document.getElementById('download_btn');
+            let a = document.createElement('a');
+            a.href = result_url;
+            a.download = `${file_name}_script.txt`;
+            a.innerHTML = `${file_name} Script Download`;
+
+            dl_btn.appendChild(a);
+
+            clearInterval(timer);
+            s_time_obj.innerText = 'Done!';
+            flag = false;
+        }).catch(err => {
+            clearInterval(timer);
+            flag = false;
+            document.getElementById('warning').innerText = err;
+        });
+
+    }
+
+</script>
+<body>
+    <div class="styles">
+        <style>
+                #button{
+                    border-top-left-radius: 5pt;
+                    border-top-right-radius: 5pt;
+                    border-bottom-left-radius: 5pt;
+                    border-bottom-right-radius: 5pt;
+                }
+
+                #length{
+                    width: 70px;
+                    height: 30px;
+                    border-top-left-radius: 5pt;
+                    border-top-right-radius: 5pt;
+                    border-bottom-left-radius: 5pt;
+                    border-bottom-right-radius: 5pt;
+                }
+
+                table {
+                  border-spacing: 10px;
+                  border-collapse: separate;
+                }
+
+        </style>
+    </div>
+    <div class="container">
+        <div class="jumbotron mt-3">
+            <div class="intro">
+                <br>
+                <!-- Project title -->
+                <h1>GPT-2 SpongeBob</h1><br>
+                <a>Generate SpongeBob script using GPT-2 model.</a><br><br>
+                <a>Git hub repository : </a> <a href="https://github.com/fpem123/GPT2-Spongebob" target="_blank">GPT-2 SpongeBob</a><br>
+                <a>Open API : </a> <a href="https://ainize.ai/fpem123/GPT2-Spongebob?branch=master" target="_blank">On Ainize</a><br>
+                <a>Fine tuning data : </a><a href="https://www.kaggle.com/mikhailgaerlan/spongebob-squarepants-completed-transcripts" target="_blank">Kaggle</a><br><br>
+            </div>
+
+            <hr width="90%">
+
+            <div class="Notice">
+                <h3>Notice</h3>
+                <ul>
+                    <li>In this demo, the text length is fixed at 105.</li>
+                    <li>The last line can be cut off in the middle.</li>
+                </ul>
+            </div>
+
+            <br><hr width="90%">
+
+            <div class="file_upload">
+                <h3>CSV file upload</h3><br>
+                <input type="file" id="csv_file" accept="text/csv" required><br>
+                <b><label id="warning" style="color:red;"></label></b>
+            </div>
+
+            <br>
+
+            <div class="heading_parser">
+                <h3>CSV head parsing</h3><br>
+                <button class="btn btn-primary btn=lg" type="submit" id="p_button" onclick="send_parsing_req();">Parsing</button>
+                <br><br>
+                <h4>Parsing result&nbsp;&nbsp;&nbsp;<label id="heading_timer"></label></h4>
+                <!-- Parsing result table -->
+                <table id="heading_table" width="100%"></table>
+            </div>
+
+            <br><br>
+
+            <div class="script_maker">
+                <h3><label>CSV Script generator</label></h3>
+                <label>Name index number: </label>
+                <input type="text" id="name" style="width:10%"><label id="name_warning" style="color:red;"></label><br>
+                <label>Dialog index number: </label>
+                <input type="text" id="dialog" style="width:10%"><label id="dialog_warning" style="color:red;"></label><br>
+                <br>
+                <button class="btn btn-primary btn=lg" type="submit" id="s_button" onclick="send_script_req();">Making</button>
+                <br><br>
+                <h4>Script result&nbsp;&nbsp;&nbsp;<label id="script_timer"></label></h4>
+                <label id="download_btn"></label>
+            </div>
+
+            <br><hr width="50%">
+        </div>
+    </div>
+</body>
+</html>
