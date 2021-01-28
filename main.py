@@ -156,6 +156,11 @@ def csv_req(types):
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
 
 
+@app.route('/sample_download')
+def send_sample():
+    return send_file('csv_data/sample.csv', mimetype='text/csv', attachment_filename='sample.csv'), 200
+
+
 ##
 # Sever health checking page.
 @app.route('/healthz', methods=["GET"])
