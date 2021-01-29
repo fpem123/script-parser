@@ -4,7 +4,7 @@
     Rule: Flask app
     update: 21.01.28
 '''
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, Response
 
 from queue import Queue, Empty
 from threading import Thread
@@ -56,19 +56,18 @@ def handle_requests_by_batch():
                     if len(requests['input']) == 1:
                         requests["output"] = json_heading_parser(requests['input'][0])
                     elif len(requests['input']) == 3:
-                        requests["output"] = json_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
+                            requests["output"] = json_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
 
 
 handler = Thread(target=handle_requests_by_batch).start()
 
 
 def json_heading_parser(json_file):
+    # 입력받은 파일 저장
+    filename = secure_filename(json_file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    json_file.save(input_path)
     try:
-        # 입력받은 파일 저장
-        filename = secure_filename(json_file.filename)
-        input_path = os.path.join(UPLOAD_FOLDER, filename)
-        json_file.save(input_path)
-
         try:
             with open(input_path, 'r', encoding='latin-1') as f:
                 json_data = json.load(f)
@@ -78,29 +77,37 @@ def json_heading_parser(json_file):
 
         for idx, data in enumerate(json_data):
             if idx == 0:
-                x = list(data.items())
+                line = list(data.items())
                 result = [[], []]
 
-                for i in x:
+                for i in line:
                     result[0].append(i[0])
-                    result[1].append(i[1])
+
+                    text = str(i[1])
+                    text = text[:30] + '...' if len(text) > 50 else text
+
+                    result[1].append(text)
 
                 os.remove(input_path)
-                return result
-    except:
-        return jsonify({'message': 'Parsing error'}), 400
+
+                return jsonify(result)
+    except Exception as e:
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        return jsonify({'error': e}), 400
 
 
 def json_script_parser(json_file, name_idx, dialog_idx):
+
+    # 입력받은 파일 저장
+    filename = secure_filename(json_file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    json_file.save(input_path)
+
+    filename = filename.split('.')[0] + '.txt'
+    result_path = os.path.join(RESULT_FOLDER, filename)
     try:
-        # 입력받은 파일 저장
-        filename = secure_filename(json_file.filename)
-        input_path = os.path.join(UPLOAD_FOLDER, filename)
-        json_file.save(input_path)
-
-        filename = filename.split('.')[0] + '.txt'
-        result_path = os.path.join(RESULT_FOLDER, filename)
-
         try:
             with open(input_path, 'r', encoding='latin-1') as f:
                 json_data = json.load(f)
@@ -111,8 +118,8 @@ def json_script_parser(json_file, name_idx, dialog_idx):
         with open(result_path, 'w', encoding='utf-8') as r:
             for idx, line in enumerate(json_data):
                 # 이름이 없으면 Narrator 로 셋팅
-                who = " ".join(line[name_idx].split()) if line[name_idx] else 'Narrator'
-                dialog = " ".join(line[dialog_idx].split())
+                who = " ".join(str(line[name_idx]).split()) if line[name_idx] else 'Narrator'
+                dialog = " ".join(str(line[dialog_idx]).split())
 
                 if dialog == '':
                     continue
@@ -128,47 +135,63 @@ def json_script_parser(json_file, name_idx, dialog_idx):
         os.remove(result_path)
 
         # heading_parser 와 다른 형태로 전송할 것이므로 구분을 위해 fake 를 추가함
-        return io.BytesIO(data), filename, 'fake'
-    except Exception:
-        return jsonify({'messege': 'Making error'})
+        return send_file(io.BytesIO(data), mimetype='text/plain', attachment_filename=filename), 200
+       #return io.BytesIO(data), filename, 'fake'
+    except Exception as e:
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        return jsonify({'error': e}), 400
 
 
 # CSV 파일의 meta 정보를 파싱
 def csv_heading_parser(csv_file):
-    try:
-        # 입력받은 파일 저장
-        filename = secure_filename(csv_file.filename)
-        input_path = os.path.join(UPLOAD_FOLDER, filename)
-        csv_file.save(input_path)
+    # 입력받은 파일 저장
+    filename = secure_filename(csv_file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    csv_file.save(input_path)
 
+    try:
         with open(input_path, 'r', encoding='utf-8-sig') as f:
             rdr = csv.reader(f)
 
             csv_headings = next(rdr)    # 컬럼 정보
             first_line = next(rdr)      # 첫째 줄 샘플
 
+            for i in range(len(first_line)):
+                first_line[i] = first_line[i][:50] + '...' if len(first_line[i]) > 30 else first_line[i]
+
             result = [csv_headings, first_line]
 
         os.remove(input_path)
 
-        return result
-    except:
-        return jsonify({'message': 'Parsing error'}), 400
+        return jsonify(result), 200
+    except Exception as e:
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        return jsonify({'error': e}), 400
 
 
 # csv 파일의 이름 인덱스와 대사 인덱스를 받아와서 스크립트 파일을 만듬
 def csv_script_parser(csv_file, name_idx, dialog_idx):
+    # 입력받은 파일 저장
+    filename = secure_filename(csv_file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    csv_file.save(input_path)
+
+    filename = filename.split('.')[0] + '.txt'
+    result_path = os.path.join(RESULT_FOLDER, filename)
+
     try:
-        # 입력받은 파일 저장
-        filename = secure_filename(csv_file.filename)
-        input_path = os.path.join(UPLOAD_FOLDER, filename)
-        csv_file.save(input_path)
-
-        filename = filename.split('.')[0] + '.txt'
-        result_path = os.path.join(RESULT_FOLDER, filename)
-
         name_idx = int(name_idx)
         dialog_idx = int(dialog_idx)
+
+        if name_idx < 0 or dialog_idx < 0:
+            raise Exception
 
         with open(input_path, 'r', encoding='utf-8-sig') as f:
             rdr = csv.reader(f)
@@ -180,8 +203,8 @@ def csv_script_parser(csv_file, name_idx, dialog_idx):
                         pass
                     else:
                         # 이름이 없으면 Narrator 로 셋팅
-                        who = " ".join(line[name_idx].split()) if line[name_idx] else 'Narrator'
-                        dialog = " ".join(line[dialog_idx].split())
+                        who = " ".join(str(line[name_idx]).split()) if line[name_idx] else 'Narrator'
+                        dialog = " ".join(str(line[dialog_idx]).split())
 
                         if dialog == '':
                             continue
@@ -197,9 +220,16 @@ def csv_script_parser(csv_file, name_idx, dialog_idx):
         os.remove(result_path)
 
         # heading_parser 와 다른 형태로 전송할 것이므로 구분을 위해 fake 를 추가함
-        return io.BytesIO(data), filename, 'fake'
-    except Exception:
-        return jsonify({'messege': 'Making error'})
+        return send_file(io.BytesIO(data), mimetype='text/plain', attachment_filename=filename), 200
+        #return io.BytesIO(data), filename, 'fake'
+    except Exception as e:
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        return jsonify({'error': e}), 400
 
 
 @app.route('/<file_types>/<types>', methods=['POST'])
@@ -222,8 +252,8 @@ def csv_req(file_types, types):
             args.append(name)
             args.append(dialog)
 
-    except Exception:
-        return jsonify({'message': 'Request Error.'}), 400
+    except Exception as e:
+        return jsonify({'error': e}), 400
 
     req = {"input": args}
     requests_queue.put(req)
@@ -233,15 +263,25 @@ def csv_req(file_types, types):
 
     result = req['output']
 
+    return result
+
+'''
     if len(result) == 2:
         return jsonify(result), 200
     elif len(result) == 3:
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
-
+    else:
+        return result
+'''
 
 # 샘플 다운로드 링크
 @app.route('/csv/sample_download')
-def send_sample():
+def send_csv_sample():
+    return send_file('data/sample.csv', mimetype='text/csv', attachment_filename='sample.csv'), 200
+
+
+@app.route('/json/sample_download')
+def send_json_sample():
     return send_file('data/sample.csv', mimetype='text/csv', attachment_filename='sample.csv'), 200
 
 
@@ -253,8 +293,13 @@ def health_check():
 
 
 @app.route('/')
-def main():
-    return render_template('main.html'), 200
+def csv_page():
+    return render_template('csvPage.html'), 200
+
+
+@app.route('/json')
+def json_page():
+    return render_template('jsonPage.html'), 200
 
 
 if __name__ == '__main__':
