@@ -47,16 +47,20 @@ def handle_requests_by_batch():
             for requests in request_batch:
                 file_type = requests['input'].pop(0)
 
-                if file_type == 'csv':
-                    if len(requests['input']) == 1:
-                        requests["output"] = csv_heading_parser(requests['input'][0])
-                    elif len(requests['input']) == 3:
-                        requests["output"] = csv_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
-                elif file_type == 'json':
-                    if len(requests['input']) == 1:
-                        requests["output"] = json_heading_parser(requests['input'][0])
-                    elif len(requests['input']) == 3:
+                try:
+                    if file_type == 'csv':
+                        if len(requests['input']) == 1:
+                            requests["output"] = csv_heading_parser(requests['input'][0])
+                        elif len(requests['input']) == 3:
+                            requests["output"] = csv_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
+                    elif file_type == 'json':
+                        if len(requests['input']) == 1:
+                            requests["output"] = json_heading_parser(requests['input'][0])
+                        elif len(requests['input']) == 3:
                             requests["output"] = json_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
+
+                except Exception as e:
+                    requests["output"] = e
 
 
 handler = Thread(target=handle_requests_by_batch).start()
@@ -67,31 +71,42 @@ def json_heading_parser(json_file):
     filename = secure_filename(json_file.filename)
     input_path = os.path.join(UPLOAD_FOLDER, filename)
     json_file.save(input_path)
+
     try:
         try:
-            with open(input_path, 'r', encoding='latin-1') as f:
+            with open(input_path, 'r', encoding='utf-8-sig') as f:
                 json_data = json.load(f)
+
         except:
-            with open(input_path, 'r', encoding='latin-1') as f:
+            with open(input_path, 'r', encoding='utf-8-sig') as f:
                 json_data = [json.loads(line) for line in f]
 
-        for idx, data in enumerate(json_data):
-            if idx == 0:
-                line = list(data.items())
-                result = [[], []]
+        line = []
 
-                for i in line:
-                    result[0].append(i[0])
+        if isinstance(json_data[0], dict):
+            line = list(json_data[0].items())
+        elif isinstance(json_data[0], list):
+            line = list(json_data[0][0].items())
+        else:
+            return jsonify({'error': 'json file error'}), 400
 
-                    text = str(i[1])
-                    text = text[:30] + '...' if len(text) > 50 else text
+        result = {0: [], 1: []}
 
-                    result[1].append(text)
+        for i in line:
+            result[0].append(i[0])
 
-                os.remove(input_path)
+            text = str(i[1])
+            text = text[:30] + '...' if len(text) > 50 else text
 
-                return result, 200
+            result[1].append(text)
+
+        os.remove(input_path)
+
+        return result
+
     except Exception as e:
+        print(e)
+
         if os.path.exists(input_path):
             os.remove(input_path)
 
@@ -107,15 +122,29 @@ def json_script_parser(json_file, name_idx, dialog_idx):
 
     filename = filename.split('.')[0] + '.txt'
     result_path = os.path.join(RESULT_FOLDER, filename)
+
     try:
         try:
-            with open(input_path, 'r', encoding='latin-1') as f:
+            with open(input_path, 'r', encoding='utf-8-sig') as f:
                 json_data = json.load(f)
         except:
-            with open(input_path, 'r', encoding='latin-1') as f:
+            with open(input_path, 'r', encoding='utf-8-sig') as f:
                 json_data = [json.loads(line) for line in f]
 
-        with open(result_path, 'w', encoding='utf-8') as r:
+        with open(result_path, 'w', encoding='utf-8-sig') as r:
+            if isinstance(json_data[0], dict):
+                pass
+            elif isinstance(json_data[0], list):
+                temp = []
+
+                for i in json_data:
+                    for j in i:
+                        temp.append(j)
+
+                json_data = temp
+            else:
+                return jsonify({'error': 'json file error'}), 400
+
             for idx, line in enumerate(json_data):
                 # 이름이 없으면 Narrator 로 셋팅
                 who = " ".join(str(line[name_idx]).split()) if line[name_idx] else 'Narrator'
@@ -134,10 +163,10 @@ def json_script_parser(json_file, name_idx, dialog_idx):
         os.remove(input_path)
         os.remove(result_path)
 
-        # heading_parser 와 다른 형태로 전송할 것이므로 구분을 위해 fake 를 추가함
-        return send_file(io.BytesIO(data), mimetype='text/plain', attachment_filename=filename), 200
-       #return io.BytesIO(data), filename, 'fake'
+        return io.BytesIO(data), filename
+
     except Exception as e:
+        print(e)
         if os.path.exists(input_path):
             os.remove(input_path)
 
@@ -164,11 +193,12 @@ def csv_heading_parser(csv_file):
             for i in range(len(first_line)):
                 first_line[i] = first_line[i][:50] + '...' if len(first_line[i]) > 30 else first_line[i]
 
-            result = [csv_headings, first_line]
+            result = {0: csv_headings, 1: first_line}
 
         os.remove(input_path)
 
-        return result, 200
+        return result
+
     except Exception as e:
         if os.path.exists(input_path):
             os.remove(input_path)
@@ -219,9 +249,8 @@ def csv_script_parser(csv_file, name_idx, dialog_idx):
         os.remove(input_path)
         os.remove(result_path)
 
-        # heading_parser 와 다른 형태로 전송할 것이므로 구분을 위해 fake 를 추가함
-        return send_file(io.BytesIO(data), mimetype='text/plain', attachment_filename=filename), 200
-        #return io.BytesIO(data), filename, 'fake'
+        return io.BytesIO(data), filename
+
     except Exception as e:
         if os.path.exists(input_path):
             os.remove(input_path)
@@ -233,7 +262,7 @@ def csv_script_parser(csv_file, name_idx, dialog_idx):
 
 
 @app.route('/<file_types>/<types>', methods=['POST'])
-def csv_req(file_types, types):
+def req(file_types, types):
     try:
         if types not in ['heading', 'script']:
             return jsonify({'message': 'Error. Wrong types'}), 400
@@ -263,16 +292,11 @@ def csv_req(file_types, types):
 
     result = req['output']
 
-    return result
-
-'''
-    if len(result) == 2:
-        return jsonify(result), 200
-    elif len(result) == 3:
+    if types == 'script' and len(result) == 2:
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
     else:
         return result
-'''
+
 
 # 샘플 다운로드 링크
 @app.route('/csv/sample_download')

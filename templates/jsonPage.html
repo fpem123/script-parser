@@ -172,7 +172,7 @@
             let a = document.createElement('a');
             a.href = result_url;
             a.download = `${file_name}_script.txt`;
-            a.innerHTML = `${file_name} Script Download`;
+            a.innerHTML = `${file_name} Script Download<br>`;
 
             dl_btn.appendChild(a);
 
@@ -225,7 +225,16 @@
                 <a>Make script text file using json parsing.</a><br><br>
                 <a>Git hub repository : </a> <a href="https://github.com/fpem123/script-parser" target="_blank">script-parser</a><br>
                 <a>Open API : </a> <a href="https://ainize.ai/fpem123/script-parser" target="_blank">On Ainize</a><br>
-                <a>Sample reference : </a><a href="https://www.kaggle.com/feniksm/simpsons?select=script_lines.csv">Kaggle</a>
+            </div>
+
+            <hr width="90%">
+
+            <div class="menu">
+                <h3>Menu</h3>
+                <ul>
+                    <li><a href="/">CSV script parsing.</a></li>
+                    <li><a href="/json">Json script parsing.</a></li>
+                </ul>
             </div>
 
             <hr width="90%">
@@ -233,12 +242,14 @@
             <div class="Notice">
                 <h3>Notice</h3>
                 <ul>
-                    <li><a href="/json/sample_download" download="sample.json">Sample download</a></li>
+                    <li>This is very experimental function</li>
+                    <li>Not sample</li>
                 </ul>
             </div>
 
+            <br><hr width="90%">
+
             <div id="json">
-                <br><hr width="90%">
 
                 <div class="file_upload">
                     <h3>JSON file upload</h3><br>

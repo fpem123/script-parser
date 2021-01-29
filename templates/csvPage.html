@@ -174,7 +174,7 @@
             let a = document.createElement('a');
             a.href = result_url;
             a.download = `${file_name}_script.txt`;
-            a.innerHTML = `${file_name} Script Download`;
+            a.innerHTML = `${file_name} Script Download<br>`;
 
             dl_btn.appendChild(a);
 
@@ -188,7 +188,6 @@
         });
 
     }
-
 
 
 </script>
@@ -232,6 +231,16 @@
 
             <hr width="90%">
 
+            <div class="menu">
+                <h3>Menu</h3>
+                <ul>
+                    <li><a href="/">CSV script parsing.</a></li>
+                    <li><a href="/json">Json script parsing.</a></li>
+                </ul>
+            </div>
+
+            <br><hr width="90%">
+
             <div class="Notice">
                 <h3>Notice</h3>
                 <ul>
@@ -240,9 +249,9 @@
                 </ul>
             </div>
 
-            <div id="csv">
-                <br><hr width="90%">
+            <br><hr width="90%">
 
+            <div id="csv">
                 <div class="file_upload">
                     <h3>CSV file upload</h3><br>
                     <input type="file" id="csv_file" accept="text/csv" required><br>
