@@ -90,7 +90,7 @@ def json_heading_parser(json_file):
 
                 os.remove(input_path)
 
-                return jsonify(result)
+                return result, 200
     except Exception as e:
         if os.path.exists(input_path):
             os.remove(input_path)
@@ -168,7 +168,7 @@ def csv_heading_parser(csv_file):
 
         os.remove(input_path)
 
-        return jsonify(result), 200
+        return result, 200
     except Exception as e:
         if os.path.exists(input_path):
             os.remove(input_path)
