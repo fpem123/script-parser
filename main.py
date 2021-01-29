@@ -306,7 +306,7 @@ def send_csv_sample():
 
 @app.route('/json/sample_download')
 def send_json_sample():
-    return send_file('data/sample.csv', mimetype='text/csv', attachment_filename='sample.csv'), 200
+    return send_file('data/sample.json', mimetype='application/json', attachment_filename='sample.json'), 200
 
 
 ##
