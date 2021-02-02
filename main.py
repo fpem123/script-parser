@@ -51,6 +51,8 @@ def handle_requests_by_batch():
                     if file_type == 'csv':
                         if len(requests['input']) == 1:
                             requests["output"] = csv_heading_parser(requests['input'][0])
+                        elif len(requests['input']) == 2:
+                            requests["output"] = csv_one_parser(requests['input'][0], requests['input'][1])
                         elif len(requests['input']) == 3:
                             requests["output"] = csv_script_parser(requests['input'][0], requests['input'][1], requests['input'][2])
                     elif file_type == 'json':
@@ -261,10 +263,64 @@ def csv_script_parser(csv_file, name_idx, dialog_idx):
         return jsonify({'error': e}), 400
 
 
+# csv 파일의 단 하나의 컬럼만 파싱
+def csv_one_parser(csv_file, one_idx):
+    # 입력받은 파일 저장
+    filename = secure_filename(csv_file.filename)
+    input_path = os.path.join(UPLOAD_FOLDER, filename)
+    csv_file.save(input_path)
+
+    filename = filename.split('.')[0] + '.txt'
+    result_path = os.path.join(RESULT_FOLDER, filename)
+
+    try:
+        one_idx = int(one_idx)
+
+        if one_idx < 0:
+            raise Exception
+
+        with open(input_path, 'r', encoding='utf-8-sig') as f:
+            rdr = csv.reader(f)
+
+            with open(result_path, 'w', encoding='utf-8') as r:
+
+                for idx, line in enumerate(rdr):
+                    if idx == 0:
+                        pass
+                    elif line[one_idx]:
+                        text = " ".join(str(line[one_idx]).split())
+
+                        if text == '':
+                            continue
+
+                        r.write(text + '\n')
+
+        # 바이너리 정보로 전송하기 위함
+        with open(result_path, 'rb') as r:
+            data = r.read()
+
+        # 보안을 위한 정보 삭제
+        os.remove(input_path)
+        os.remove(result_path)
+
+        return io.BytesIO(data), filename
+
+    except Exception as e:
+        print(e)
+
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        return jsonify({'error': e}), 400
+
+
 @app.route('/<file_types>/<types>', methods=['POST'])
 def req(file_types, types):
     try:
-        if types not in ['heading', 'script']:
+        if types not in ['heading', 'script', 'one']:
             return jsonify({'message': 'Error. Wrong types'}), 400
 
         if requests_queue.qsize() > BATCH_SIZE:
@@ -272,6 +328,7 @@ def req(file_types, types):
 
         args = [file_types]
         file = request.files['file']
+
         args.append(file)
 
         if types == 'script':
@@ -280,6 +337,11 @@ def req(file_types, types):
 
             args.append(name)
             args.append(dialog)
+
+        if types == 'one':
+            idx = request.form['idx']
+
+            args.append(idx)
 
     except Exception as e:
         return jsonify({'error': e}), 400
@@ -293,6 +355,8 @@ def req(file_types, types):
     result = req['output']
 
     if types == 'script' and len(result) == 2:
+        return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
+    elif types == 'one' and len(result) == 2:
         return send_file(result[0], mimetype='text/plain', attachment_filename=result[1]), 200
     else:
         return result
